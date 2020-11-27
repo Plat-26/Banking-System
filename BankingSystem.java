@@ -1,50 +1,12 @@
 package banking;
 
 import java.util.HashMap;
-import java.util.Scanner;
 import java.util.Random;
+import java.util.Scanner;
 
+class BankingSystem {
 
-public class BankingSystem {
-    public static void main(String[] args) {
-		
-        Bank bank = new Bank();
-        bank.startMenu();
-    }
-}
-
-class Account {
-
-    private final long NUMBER;
-    private final int PIN;
-    private double balance;
-
-    public Account(String number, int pin) {
-        this.NUMBER = Long.parseLong(number);
-        this.PIN = pin;
-        this.balance = 0;
-    }
-
-    public int getPIN() {
-        return PIN;
-    }
-
-    public long getNUMBER() {
-        return NUMBER;
-    }
-
-    public double getBalance() {
-        return balance;
-    }
-
-    public void setBalance(double balance) {
-        this.balance += balance;
-    }
-}
-
-class Bank {
-
-    Operations ops = new Operations();
+    private Operations ops = new Operations();
 
     void startMenu() {
         ops.printStartMenu();
@@ -53,13 +15,13 @@ class Bank {
         switch (userChoice) {
 
             case 0: exit();
-                    break;
+                break;
             case 1: createAccount();
-                    startMenu();
-                    break;
+                startMenu();
+                break;
             case 2: logIn();
-                    startMenu();
-                    break;
+                startMenu();
+                break;
         }
     }
 
@@ -67,7 +29,7 @@ class Bank {
         System.out.println("\nEnter your card number:");
         String cardNumber = ops.validateInput("[0-9]{16}", true);
         System.out.println("Enter your PIN:");
-        int userPin = ops.validateInput("[0-9]{4}");
+        String userPin = ops.validateInput("[0-9]{4}", true);
 
         if (ops.validateUserLogin(cardNumber, userPin)) {
             Account acct = ops.getAccount(userPin);
@@ -85,13 +47,13 @@ class Bank {
 
         switch (userChoice) {
 
-            case 0: exit();
-                    break;
+            case 0: System.out.println();
+                break;
             case 1: System.out.println("\nBalance: " + acct.getBalance());
-                    loggedInMenu(acct);
-                    break;
+                loggedInMenu(acct);
+                break;
             case 2: System.out.println("\nYou have successfully logged out!");
-                    break;
+                break;
         }
     }
 
@@ -115,7 +77,7 @@ class Bank {
 
 class Operations {
 
-    private HashMap<Integer, Account> accounts = new HashMap<>();
+    private HashMap<String, Account> accounts = new HashMap<>();
 
     void printLogInMenu() {
         System.out.println(
@@ -133,58 +95,105 @@ class Operations {
 
     String createNewAccount() {
 
-        String number = generateCardNumber();
+        String cardNum = generateCardNumber();
 
-        int pin = generateUserPin();
+        String pin = generateUserPin();
 
-        if (put(number, pin)) {
+        if (put(cardNum, pin)) {
 
-            return number + " " + pin;
+            return cardNum + " " + pin;
         }
 
         return null;
     }
 
-    Account getAccount(int userPin) {
+    Account getAccount(String userPin) {
 
         return accounts.get(userPin);
     }
 
-    private int generateUserPin() {
+    private String generateUserPin() {
         StringBuilder pinNumber = new StringBuilder();
         Random random = new Random();
 
-        for (int i = 0; i < 4; i++) {
+        while(pinNumber.length() < 4) {
             pinNumber.append(random.nextInt(10));
         }
 
-        return Integer.parseInt(pinNumber.toString());
+        return pinNumber.toString();
     }
 
     private String generateCardNumber() {
         StringBuilder cardNumber = new StringBuilder("400000");
         Random random = new Random();
 
-        for (int i = 0; i < 9; i++) {
+        while(cardNumber.length() < 15) {
+
             cardNumber.append(random.nextInt(10));
         }
-        cardNumber.append(5);
-        return cardNumber.toString();
+        return createSafeCard(cardNumber.toString());
     }
 
-    private boolean put(String number, int pin){
+    private int processNum(char val, boolean isOdd) {
+        int num = Integer.parseInt(Character.toString(val));
+
+        if (isOdd) {
+            num = num * 2;
+        }
+
+        return (num > 9) ? (num - 9) : num;
+    }
+
+    private int addNumbers(String number) {
+        int sum = 0;
+        int index = 1;
+
+        for (int i = 0; i < 15; i++) {
+
+            if (index % 2 == 0) {
+
+                sum += processNum(number.charAt(i), false);
+            } else {
+
+                sum += processNum(number.charAt(i), true);
+            }
+            index++;
+        }
+
+
+        return sum;
+    }
+
+
+    private String createSafeCard(String number) {
+        int rem = addNumbers(number) % 10;
+
+        int controlNum = (rem != 0) ? (10 - rem) : rem;
+
+        return number + "" + controlNum;
+    }
+
+    private boolean checkLuhn(String cardNum) {
+        int rem = (addNumbers(cardNum) + Integer.parseInt(Character.toString(cardNum.charAt(15)))) % 10;
+
+        return rem == 0;
+    }
+
+    private boolean put(String number, String pin) {
 
         Account account = accounts.computeIfAbsent(pin, k -> new Account(number, pin));
 
         return account != null;
     }
 
-    boolean validateUserLogin(String cardNumber, int userPin) {
+    boolean validateUserLogin(String cardNumber, String userPin) {
 
-        long cardNum = Long.parseLong(cardNumber);
+        if (checkLuhn(cardNumber)) {
+            long cardNum = Long.parseLong(cardNumber);
 
-        if ((accounts.get(userPin)) != null) {
-            return accounts.get(userPin).getNUMBER() == cardNum;
+            if ((accounts.get(userPin)) != null) {
+                return accounts.get(userPin).getNUMBER() == cardNum;
+            }
         }
 
         return false;
