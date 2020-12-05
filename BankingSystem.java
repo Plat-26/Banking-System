@@ -1,12 +1,15 @@
 package banking;
 
-import java.util.HashMap;
 import java.util.Random;
 import java.util.Scanner;
 
 class BankingSystem {
 
-    private Operations ops = new Operations();
+    private Operations ops;
+
+    BankingSystem(BankData data) {
+        this.ops = new Operations(data);
+    }
 
     void startMenu() {
         ops.printStartMenu();
@@ -26,31 +29,37 @@ class BankingSystem {
     }
 
     private void logIn() {
-        System.out.println("\nEnter your card number:");
-        String cardNumber = ops.validateInput("[0-9]{16}", true);
-        System.out.println("Enter your PIN:");
-        String userPin = ops.validateInput("[0-9]{4}", true);
+        String userInput = ops.getLoginDetails();
 
-        if (ops.validateUserLogin(cardNumber, userPin)) {
-            Account acct = ops.getAccount(userPin);
-            System.out.println("\nYou have successfully logged in!");
-            loggedInMenu(acct);
+        if (userInput != null) {
 
-        } else {
-            System.out.println("\nWrong card number or PIN!");
+            String[] userData = userInput.split(" ");
+
+            if (ops.validateUserLogin(userData[0])) {
+
+                int balance = ops.getAccount(userData[0], userData[1]);
+
+                if (balance >= 0) {
+                    System.out.println("\nYou have successfully logged in!");
+                    loggedInMenu(balance);
+                    return;
+                }
+            }
         }
+
+        System.out.println("\nWrong card number or PIN!");
     }
 
-    private void loggedInMenu(Account acct) {
+    private void loggedInMenu(int balance) {
         ops.printLogInMenu();
         int userChoice = ops.validateInput("[012]");
 
         switch (userChoice) {
 
-            case 0: System.out.println();
+            case 0: exit();
                 break;
-            case 1: System.out.println("\nBalance: " + acct.getBalance());
-                loggedInMenu(acct);
+            case 1: System.out.println("\nBalance: " + balance);
+                loggedInMenu(balance);
                 break;
             case 2: System.out.println("\nYou have successfully logged out!");
                 break;
@@ -68,8 +77,8 @@ class BankingSystem {
     }
 
     private void exit() {
-
         System.out.println("\nBye!");
+        System.exit(0);
     }
 
 }
@@ -77,7 +86,11 @@ class BankingSystem {
 
 class Operations {
 
-    private HashMap<String, Account> accounts = new HashMap<>();
+    BankData data;
+
+    Operations(BankData data) {
+        this.data = data;
+    }
 
     void printLogInMenu() {
         System.out.println(
@@ -103,13 +116,12 @@ class Operations {
 
             return cardNum + " " + pin;
         }
-
         return null;
     }
 
-    Account getAccount(String userPin) {
+    int getAccount(String cardNumber, String userPin) {
 
-        return accounts.get(userPin);
+        return data.getData(cardNumber, userPin);
     }
 
     private String generateUserPin() {
@@ -159,11 +171,8 @@ class Operations {
             }
             index++;
         }
-
-
         return sum;
     }
-
 
     private String createSafeCard(String number) {
         int rem = addNumbers(number) % 10;
@@ -181,37 +190,33 @@ class Operations {
 
     private boolean put(String number, String pin) {
 
-        Account account = accounts.computeIfAbsent(pin, k -> new Account(number, pin));
-
-        return account != null;
+        return data.updateTable(number, pin);
     }
 
-    boolean validateUserLogin(String cardNumber, String userPin) {
+    boolean validateUserLogin(String cardNumber) {
 
-        if (checkLuhn(cardNumber)) {
-            long cardNum = Long.parseLong(cardNumber);
-
-            if ((accounts.get(userPin)) != null) {
-                return accounts.get(userPin).getNUMBER() == cardNum;
-            }
-        }
-
-        return false;
+        return checkLuhn(cardNumber);
     }
 
-    String validateInput(String txtForRegex, boolean useString) {
+    String getLoginDetails() {
         Scanner scanner = new Scanner(System.in);
 
-        if (useString) {
+        System.out.println("\nEnter your card number:");
+        String cardNumber = scanner.nextLine();
+        System.out.println("Enter your PIN:");
+        String userPin = scanner.nextLine();
 
-            String userInput = scanner.nextLine();
-            while(!userInput.matches(txtForRegex)) {
-                System.out.println("Invalid format");
-                userInput = scanner.nextLine();
-            }
-            return userInput;
+        if (validateInput(cardNumber,"[0-9]{16}") && validateInput(userPin,"[0-9]{4}")){
+
+            return cardNumber + " " + userPin;
         }
+
         return null;
+    }
+
+    private boolean validateInput(String userInput, String txtForRegex) {
+
+        return userInput.matches(txtForRegex);
     }
 
     int validateInput(String txtForRegex) {

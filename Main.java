@@ -1,12 +1,17 @@
 package banking;
 
-import java.util.HashMap;
-import java.util.Scanner;
-import java.util.Random;
+import org.sqlite.SQLiteDataSource;
 
 public class Main {
     public static void main(String[] args) {
-        BankingSystem bank = new BankingSystem();
+        SQLiteDataSource dataSource = new SQLiteDataSource();
+        String url = "jdbc:sqlite:" + args[1];
+        dataSource.setUrl(url);
+
+        BankData data = new BankData(dataSource);
+        data.createTable();
+
+        BankingSystem bank = new BankingSystem(data);
         bank.startMenu();
     }
 }
